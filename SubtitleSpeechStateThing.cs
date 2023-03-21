@@ -11,10 +11,16 @@ namespace TextToSpeechAndSubtitles
 {
     internal class SubtitleSpeechStateThing
     {
-        private List<SubtitleUnit> subtitleUnits = new List<SubtitleUnit>();
+        private List<SubtitleUnit> _subtitleUnits = new List<SubtitleUnit>();
+        private SynthesisFileInfo _fileInfo;
 
 
-        public void DoSynthesisAndSubtitles(SynthesisFileInfo fileInfo)
+        public SubtitleSpeechStateThing(SynthesisFileInfo fileInfo)
+        {
+            _fileInfo = fileInfo; 
+        }
+
+        public void DoSynthesisAndSubtitles()
         {
             using (SpeechSynthesizer synth = new SpeechSynthesizer())
             {
@@ -27,7 +33,7 @@ namespace TextToSpeechAndSubtitles
 
                 var builder = new PromptBuilder();
 
-                var inputLines = File.ReadAllLines(fileInfo.InputFileName);
+                var inputLines = File.ReadAllLines(_fileInfo.InputFileName);
 
                 for (int i = 0; i < inputLines.Length; i++)
                 {
@@ -36,7 +42,7 @@ namespace TextToSpeechAndSubtitles
 
                 synth.Speak(builder);
 
-                using (var fileStream = File.Open(fileInfo.SubtitleFileName, FileMode.Create))
+                using (var fileStream = File.Open(_fileInfo.SubtitleFileName, FileMode.Create))
                 {
                     //    subWriter.WriteStream(fileStream, subtitleItems);
                     fileStream.Write(Encoding.UTF8.GetBytes(
@@ -50,7 +56,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 "
                         ));
 
-                    foreach (var unit in subtitleUnits)
+                    foreach (var unit in _subtitleUnits)
                     {
                         var startTimestamp = unit.StartTime.ToString(@"h\:mm\:ss\.ff");
                         var endTimestamp = unit.EndTime.ToString(@"h\:mm\:ss\.ff");
@@ -67,13 +73,13 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 
                 TimeSpan pos = e.AudioPosition;
 
-                var lastSub = subtitleUnits.LastOrDefault();
+                var lastSub = _subtitleUnits.LastOrDefault();
                 if (lastSub is not null)
                 {
                     lastSub.EndTime = pos;
                 }
 
-                subtitleUnits.Add(new SubtitleUnit
+                _subtitleUnits.Add(new SubtitleUnit
                 {
                     StartTime = pos,
                     EndTime = TimeSpan.MaxValue,
@@ -83,17 +89,17 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 
         }
 
-        public void MakeWavFile(SynthesisFileInfo fileInfo)
+        public void MakeWavFile()
         {
             using (SpeechSynthesizer synth = new SpeechSynthesizer())
             {
-                synth.SetOutputToWaveFile(fileInfo.AudioFileName, new SpeechAudioFormatInfo(32000, AudioBitsPerSample.Sixteen, AudioChannel.Mono));
+                synth.SetOutputToWaveFile(_fileInfo.AudioFileName, new SpeechAudioFormatInfo(32000, AudioBitsPerSample.Sixteen, AudioChannel.Mono));
 
                 synth.SelectVoiceByHints(VoiceGender.Female);
 
                 var builder = new PromptBuilder();
 
-                var inputLines = File.ReadAllLines(fileInfo.InputFileName);
+                var inputLines = File.ReadAllLines(_fileInfo.InputFileName);
 
                 for (int i = 0; i < inputLines.Length; i++)
                 {

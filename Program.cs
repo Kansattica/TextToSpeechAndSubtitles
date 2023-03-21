@@ -23,9 +23,9 @@
 
             Console.WriteLine($"Going to read {fileInfo.InputFileName} and write to {fileInfo.AudioFileName} and {fileInfo.SubtitleFileName}.");
 
-            var stateThing = new SubtitleSpeechStateThing();
-            stateThing.DoSynthesisAndSubtitles(fileInfo);
-            stateThing.MakeWavFile(fileInfo);
+            var stateThing = new SubtitleSpeechStateThing(fileInfo);
+            stateThing.DoSynthesisAndSubtitles();
+            stateThing.MakeWavFile();
         }
 
 
