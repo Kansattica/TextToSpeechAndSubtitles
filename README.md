@@ -1,5 +1,7 @@
 # TextToSpeechAndSubtitles
 
+warning: i'm not proud of this code. i promise i can do better than this, but it's late
+
 should work like this:
 
 `dotnet run somefile.txt someotherfile.txt`
