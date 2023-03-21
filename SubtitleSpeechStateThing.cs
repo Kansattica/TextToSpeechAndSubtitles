@@ -36,7 +36,7 @@ namespace TextToSpeechAndSubtitles
 
                 synth.Speak(builder);
 
-                using (var fileStream = File.Open(fileInfo.SubtitleFileName, FileMode.Truncate))
+                using (var fileStream = File.Open(fileInfo.SubtitleFileName, FileMode.Create))
                 {
                     //    subWriter.WriteStream(fileStream, subtitleItems);
                     fileStream.Write(Encoding.UTF8.GetBytes(
@@ -79,6 +79,28 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
                     EndTime = TimeSpan.MaxValue,
                     Text = e.Text
                 });
+            }
+
+        }
+
+        public void MakeWavFile(SynthesisFileInfo fileInfo)
+        {
+            using (SpeechSynthesizer synth = new SpeechSynthesizer())
+            {
+                synth.SetOutputToWaveFile(fileInfo.AudioFileName, new SpeechAudioFormatInfo(32000, AudioBitsPerSample.Sixteen, AudioChannel.Mono));
+
+                synth.SelectVoiceByHints(VoiceGender.Female);
+
+                var builder = new PromptBuilder();
+
+                var inputLines = File.ReadAllLines(fileInfo.InputFileName);
+
+                for (int i = 0; i < inputLines.Length; i++)
+                {
+                    builder.AppendText(inputLines[i]);
+                }
+
+                synth.Speak(builder);
             }
 
         }

@@ -1,6 +1,4 @@
-﻿
-
-namespace TextToSpeechAndSubtitles
+﻿namespace TextToSpeechAndSubtitles
 {
     internal class Program
     {
@@ -27,6 +25,7 @@ namespace TextToSpeechAndSubtitles
 
             var stateThing = new SubtitleSpeechStateThing();
             stateThing.DoSynthesisAndSubtitles(fileInfo);
+            stateThing.MakeWavFile(fileInfo);
         }
 
 
