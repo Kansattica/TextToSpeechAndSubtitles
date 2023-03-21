@@ -13,11 +13,28 @@ namespace TextToSpeechAndSubtitles
     {
         private List<SubtitleUnit> _subtitleUnits = new List<SubtitleUnit>();
         private SynthesisFileInfo _fileInfo;
+        private PromptBuilder _builder;
+        private string[] _inputLines;
+        private SubtitleOutput _subtitleStyle;
+        private int _currentLine = 0;
+        private int _lastLineStart = 0;
+        private int _lastCharPos = 0;
 
-
-        public SubtitleSpeechStateThing(SynthesisFileInfo fileInfo)
+        public SubtitleSpeechStateThing(SynthesisFileInfo fileInfo, SubtitleOutput subtitleOutput)
         {
-            _fileInfo = fileInfo; 
+            _fileInfo = fileInfo;
+            _builder = new PromptBuilder();
+
+            _inputLines = File.ReadAllLines(_fileInfo.InputFileName).Where(x => !string.IsNullOrWhiteSpace(x)).ToArray();
+
+            for (int i = 0; i < _inputLines.Length; i++)
+            {
+                _builder.AppendText(_inputLines[i]);
+                _builder.AppendBookmark(i.ToString());
+            }
+
+            _subtitleStyle = subtitleOutput;
+
         }
 
         public void DoSynthesisAndSubtitles()
@@ -30,17 +47,10 @@ namespace TextToSpeechAndSubtitles
                 synth.SelectVoiceByHints(VoiceGender.Female);
 
                 synth.SpeakProgress += synth_SpeakProgress;
+                synth.BookmarkReached += synth_Bookmark;
 
-                var builder = new PromptBuilder();
-
-                var inputLines = File.ReadAllLines(_fileInfo.InputFileName);
-
-                for (int i = 0; i < inputLines.Length; i++)
-                {
-                    builder.AppendText(inputLines[i]);
-                }
-
-                synth.Speak(builder);
+                _currentLine = _lastCharPos = _lastLineStart = 0;
+                synth.Speak(_builder);
 
                 using (var fileStream = File.Open(_fileInfo.SubtitleFileName, FileMode.Create))
                 {
@@ -79,14 +89,31 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
                     lastSub.EndTime = pos;
                 }
 
+                var subText = _subtitleStyle == SubtitleOutput.Words ? 
+                    e.Text :
+                    FindSubstringEndingInSpokenWord(_inputLines[_currentLine].Substring(_lastLineStart, Math.Min(e.CharacterPosition + e.CharacterCount, _inputLines[_currentLine].Length)), e.Text);
+                _lastCharPos = e.CharacterPosition + e.CharacterCount;
+                Console.WriteLine(subText);
                 _subtitleUnits.Add(new SubtitleUnit
                 {
                     StartTime = pos,
                     EndTime = TimeSpan.MaxValue,
-                    Text = e.Text
+                    Text = subText
                 });
             }
 
+            void synth_Bookmark(object sender, BookmarkReachedEventArgs e)
+            {
+                _currentLine = int.Parse(e.Bookmark);
+                _lastLineStart = _lastCharPos;
+            }
+
+        }
+
+        private string FindSubstringEndingInSpokenWord(string haystack, string needle)
+        {
+            // todo: handle when words are substrings of other words, like "a"
+            return haystack.Substring(0, haystack.LastIndexOf(needle) + needle.Length);
         }
 
         public void MakeWavFile()
@@ -97,16 +124,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 
                 synth.SelectVoiceByHints(VoiceGender.Female);
 
-                var builder = new PromptBuilder();
-
-                var inputLines = File.ReadAllLines(_fileInfo.InputFileName);
-
-                for (int i = 0; i < inputLines.Length; i++)
-                {
-                    builder.AppendText(inputLines[i]);
-                }
-
-                synth.Speak(builder);
+                synth.Speak(_builder);
             }
 
         }
@@ -116,6 +134,12 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             public TimeSpan StartTime;
             public TimeSpan EndTime;
             public string Text = string.Empty;
+        }
+
+        public enum SubtitleOutput
+        {
+            Words,
+            Paragraphs
         }
     }
 }
